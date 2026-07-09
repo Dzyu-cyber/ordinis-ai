@@ -3,6 +3,7 @@ import { GmailService } from './GmailService';
 import { WhatsAppService } from './WhatsAppService';
 import { AIService } from './AIService';
 import { LeadService } from './LeadService';
+import { AutomationService } from './AutomationService';
 
 export class CommunicationService {
   /**
@@ -103,7 +104,22 @@ export class CommunicationService {
       [conversationId, 'inbound', sender, content, false]
     );
 
-    return messageResult.rows[0];
+    const message = messageResult.rows[0];
+
+    // Trigger webhook event
+    AutomationService.triggerWebhook(userId, 'message_received', {
+      leadId,
+      conversationId,
+      channel,
+      messageId: message.id,
+      direction: message.direction,
+      sender: message.sender,
+      content: message.content
+    }).catch((err) => {
+      console.error('[communication-service]: Webhook trigger failure for message_received', err);
+    });
+
+    return message;
   }
 
   /**

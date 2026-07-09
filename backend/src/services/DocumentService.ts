@@ -1,5 +1,6 @@
 import { db } from '../config/db';
 import { AIService } from './AIService';
+import { AutomationService } from './AutomationService';
 
 export class DocumentService {
   /**
@@ -104,6 +105,16 @@ export class DocumentService {
          VALUES ($1, $2, $3)`,
         [userId, 'document_processed', JSON.stringify({ documentId, filename: doc.filename, status: 'completed' })]
       );
+
+      // Trigger webhook event
+      AutomationService.triggerWebhook(userId, 'document_processed', {
+        documentId,
+        filename: doc.filename,
+        documentType: doc.document_type,
+        parsedContent
+      }).catch((err) => {
+        console.error('[document-service]: Webhook trigger failure for document_processed', err);
+      });
 
       console.log(`[vision]: Completed document extraction for ${doc.filename}`);
     } catch (error: any) {

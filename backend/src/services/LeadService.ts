@@ -1,5 +1,6 @@
 import { db } from '../config/db';
 import { CreateLeadInput, UpdateLeadInput } from '../validators/leadValidator';
+import { AutomationService } from './AutomationService';
 
 export class LeadService {
   /**
@@ -23,6 +24,11 @@ export class LeadService {
        VALUES ($1, $2, $3)`,
       [userId, 'lead_created', JSON.stringify({ leadId: newLead.id, name: newLead.name, company: newLead.company })]
     );
+
+    // Trigger webhook event
+    AutomationService.triggerWebhook(userId, 'lead_created', newLead).catch((err) => {
+      console.error('[lead-service]: Webhook trigger failure for lead_created', err);
+    });
 
     return newLead;
   }

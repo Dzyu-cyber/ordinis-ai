@@ -3,6 +3,7 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import { db } from '../config/db';
+import { AutomationService } from './AutomationService';
 
 dotenv.config();
 
@@ -191,6 +192,19 @@ export class AIService {
          VALUES ($1, $2, $3)`,
         [userId, 'lead_qualified', JSON.stringify({ leadId, score: qualification.score })]
       );
+
+      // Trigger webhook event
+      AutomationService.triggerWebhook(userId, 'lead_qualified', {
+        leadId,
+        score: qualification.score,
+        budget: qualification.budget,
+        authority: qualification.authority,
+        need: qualification.need,
+        timeline: qualification.timeline,
+        summary: qualification.summary
+      }).catch((err) => {
+        console.error('[openai]: Webhook trigger failure for lead_qualified', err);
+      });
 
       console.log(`[openai]: Successfully qualified lead ${leadId} with score ${qualification.score}`);
     } catch (error) {

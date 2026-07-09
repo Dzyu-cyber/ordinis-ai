@@ -64,5 +64,42 @@ export const db = {
     } finally {
       client.release();
     }
+  },
+
+  /**
+   * Run startup migrations to ensure webhook tables exist
+   */
+  initializeSchema: async () => {
+    console.log('[database]: Running schema validation checks...');
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS webhook_subscriptions (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            event_type VARCHAR(50) NOT NULL,
+            url TEXT NOT NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS webhook_logs (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            event_type VARCHAR(50) NOT NULL,
+            url TEXT NOT NULL,
+            payload JSONB DEFAULT '{}'::jsonb,
+            response_status INTEGER,
+            response_body TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      console.log('[database]: Webhook tables validated successfully.');
+    } catch (error) {
+      console.error('[database]: Schema initialization failed', error);
+      throw error;
+    }
   }
 };

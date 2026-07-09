@@ -10,6 +10,7 @@ import leadRoutes from './routes/leadRoutes';
 import communicationRoutes from './routes/communicationRoutes';
 import documentRoutes from './routes/documentRoutes';
 import reportingRoutes from './routes/reportingRoutes';
+import automationRoutes from './routes/automationRoutes';
 import { errorMiddleware } from './middleware/errorMiddleware';
 
 // Load environment variables
@@ -37,6 +38,7 @@ app.use('/api/leads', leadRoutes);
 app.use('/api/communication', communicationRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/reports', reportingRoutes);
+app.use('/api/automations', automationRoutes);
 
 // Basic health check route verifying DB connection
 app.get('/health', async (req: Request, res: Response) => {
@@ -67,6 +69,9 @@ app.listen(PORT, async () => {
   try {
     await db.checkConnection();
     console.log('[server]: Database connected successfully');
+    
+    // Initialize/validate schema tables
+    await db.initializeSchema();
   } catch (err) {
     console.error('[server]: Database connection failed on startup. Make sure DATABASE_URL is set correctly.');
   }
