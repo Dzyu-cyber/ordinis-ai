@@ -65,7 +65,9 @@ export class DocumentController {
         });
       }
 
-      if (!req.file) {
+      const anyReq = req as any;
+
+      if (!anyReq.file) {
         return res.status(400).json({
           success: false,
           error: { message: 'No file uploaded. Please select a document to upload.', code: 'FILE_MISSING' }
@@ -73,21 +75,21 @@ export class DocumentController {
       }
 
       // Validate query/form metadata
-      const validatedData = uploadSchema.parse(req.body);
+      const validatedData = uploadSchema.parse(anyReq.body);
 
       // Create pending document row in database
       const document = await DocumentService.createDocumentRecord(
-        req.user.id,
-        req.file.originalname,
+        anyReq.user.id,
+        anyReq.file.originalname,
         validatedData.documentType
       );
 
       // Spawn background AI extraction without awaiting (non-blocking)
       DocumentService.processDocument(
-        req.user.id,
+        anyReq.user.id,
         document.id,
-        req.file.buffer,
-        req.file.mimetype
+        anyReq.file.buffer,
+        anyReq.file.mimetype
       ).catch((err) => {
         console.error(`[controller]: Async extraction failure for doc ${document.id}`, err);
       });

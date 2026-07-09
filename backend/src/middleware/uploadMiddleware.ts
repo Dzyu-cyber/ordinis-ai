@@ -5,7 +5,7 @@ import { Request } from 'express';
 const storage = multer.memoryStorage();
 
 // File type filter validation
-const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+const fileFilter = (req: Request, file: any, cb: FileFilterCallback) => {
   const allowedMimeTypes = [
     'application/pdf',
     'image/png',

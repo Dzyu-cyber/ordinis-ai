@@ -387,7 +387,7 @@ export class AIService {
           temperature: 0.1,
         });
 
-        extractionResult = response.choices[0].message.parsed;
+        extractionResult = (response.choices[0].message as any).parsed;
       } else {
         // PDF text extraction fallback path
         // For text-based PDFs, convert buffer to string. Even if raw PDF binary, GPT-4o can often parse readable ASCII text chunks.
@@ -408,7 +408,7 @@ export class AIService {
           temperature: 0.1,
         });
 
-        extractionResult = response.choices[0].message.parsed;
+        extractionResult = (response.choices[0].message as any).parsed;
       }
 
       if (!extractionResult) {
