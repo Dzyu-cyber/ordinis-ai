@@ -191,20 +191,21 @@ Avoid building all frontends first or all APIs first.
 * JWT cookie-based Authentication routes, service, validation, and middleware implemented
 * Frontend client, routing, global Auth context hook (`useAuth`), layouts, login, signup, and dashboard view pages implemented
 * Tailwind CSS v4 styling and premium glassmorphic theme system integrated
+* Module 2 — AI Lead Engine (including Zod validators, Lead CRUD DB operations, OpenAI Structured Outputs BANT qualification logic, and CRM Leads dashboard page) fully completed and verified
 
 ## In Progress
 
-Preparing Module 2 — AI Lead Engine.
+Preparing Module 3 — AI Communication Hub.
 
 ## Next Milestone
 
-Module 2 — AI Lead Engine
+Module 3 — AI Communication Hub
 
 Includes:
-* Database migration for CRM leads and webhook events
-* Public website lead capture API endpoint
-* AI lead qualification & scoring service utilizing OpenAI Structured Outputs
-* CRM leads manager frontend view Integration
+* Generic messaging channels (Email, WhatsApp) service adapters and models
+* Unified Inbox layout showing active threads with unread statuses
+* AI Reply Suggestions panel generating suggested templates/emails using GPT-4o-mini
+* Incoming webhook ingestion endpoints and status updates
 
 ---
 
