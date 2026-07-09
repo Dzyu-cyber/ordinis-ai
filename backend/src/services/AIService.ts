@@ -197,4 +197,66 @@ export class AIService {
       console.error(`[openai]: Background qualification job failed for lead ${leadId}`, error);
     }
   }
+
+  /**
+   * Auto-generate a reply draft based on conversation history and lead qualification details
+   */
+  static async generateDraftReply(
+    leadName: string,
+    qualificationDetails: any,
+    lastMessage: string,
+    historyText: string,
+    channel: 'email' | 'whatsapp'
+  ): Promise<string> {
+    const isConfigured = !!openai;
+
+    if (!isConfigured) {
+      console.log('[openai]: OpenAI is not configured. Returning fallback mock draft reply.');
+      return `Hi ${leadName},\n\nThank you for your message! This is an auto-generated draft reply. We would love to discuss how Ordinis AI can assist you with your operations. Let's schedule a call.\n\nBest regards,\nOrdinis AI Operations`;
+    }
+
+    try {
+      const response = await openai!.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `
+              You are an AI Business Operations Manager drafting responses for customer messages.
+              
+              Lead Details:
+              - Name: ${leadName}
+              - Qualification Context: ${JSON.stringify(qualificationDetails || {})}
+              
+              Channel: ${channel.toUpperCase()}
+              
+              Guidelines:
+              - If channel is EMAIL: Draft a professional email. Include greetings, body paragraphs, and a professional sign-off.
+              - If channel is WHATSAPP: Keep the message short (1-3 sentences), warm, conversational, and direct.
+              - Reference qualification needs (e.g. automating forms or invoices) if it makes the message highly relevant.
+              - Avoid placeholders. Generate a complete ready-to-send draft.
+            `,
+          },
+          {
+            role: 'user',
+            content: `
+              Conversation History:
+              ${historyText || 'No previous messages.'}
+              
+              Last Message Received:
+              "${lastMessage}"
+              
+              Draft a reply to this last message.
+            `,
+          },
+        ],
+        temperature: 0.7,
+      });
+
+      return response.choices[0].message.content || '';
+    } catch (error) {
+      console.error('[openai]: Failed to generate draft reply. Using mock fallback.', error);
+      return `Hi ${leadName},\n\nThank you for reaching out! We received your message: "${lastMessage.substring(0, 40)}..." and are analyzing your request. We will follow up shortly.\n\nBest regards,\nOrdinis AI Operations`;
+    }
+  }
 }
