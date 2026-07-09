@@ -192,20 +192,21 @@ Avoid building all frontends first or all APIs first.
 * Frontend client, routing, global Auth context hook (`useAuth`), layouts, login, signup, and dashboard view pages implemented
 * Tailwind CSS v4 styling and premium glassmorphic theme system integrated
 * Module 2 — AI Lead Engine (including Zod validators, Lead CRUD DB operations, OpenAI Structured Outputs BANT qualification logic, and CRM Leads dashboard page) fully completed and verified
+* Module 3 — AI Communication Hub (including Gmail SMTP adapter, WhatsApp mock interface, thread ingestion services, suggestion draft generation via GPT-4o-mini, and Unified Inbox UI with webhook simulation) fully completed and verified
 
 ## In Progress
 
-Preparing Module 3 — AI Communication Hub.
+Preparing Module 4 — AI Document Intelligence.
 
 ## Next Milestone
 
-Module 3 — AI Communication Hub
+Module 4 — AI Document Intelligence
 
 Includes:
-* Generic messaging channels (Email, WhatsApp) service adapters and models
-* Unified Inbox layout showing active threads with unread statuses
-* AI Reply Suggestions panel generating suggested templates/emails using GPT-4o-mini
-* Incoming webhook ingestion endpoints and status updates
+* Express multer configuration for multi-part file uploads
+* Vision Service API wrapper to send files to OpenAI GPT-4o Vision
+* Asynchronous document extraction task updating database JSONB parsed content
+* Frontend Documents page displaying upload dropzone, status list, and side-by-side parsed details view
 
 ---
 
