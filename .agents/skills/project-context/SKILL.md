@@ -184,28 +184,27 @@ Avoid building all frontends first or all APIs first.
 
 * Product vision finalized
 * PRD completed
-* Architecture selected
-* Technology stack selected
-* Module roadmap completed
-* Engineering standards established
+* Architecture specification (`ARCHITECTURE.md`) completed
+* Monorepo directory structures initialized
+* Sequential SQL migrations database schema (`database/migrations/0001_init.sql` and seeding script) implemented
+* Express backend scaffolded with security middleware (Helmet, Cookie-Parser, Morgan, Cors)
+* JWT cookie-based Authentication routes, service, validation, and middleware implemented
+* Frontend client, routing, global Auth context hook (`useAuth`), layouts, login, signup, and dashboard view pages implemented
+* Tailwind CSS v4 styling and premium glassmorphic theme system integrated
 
 ## In Progress
 
-Project initialization.
+Preparing Module 2 — AI Lead Engine.
 
 ## Next Milestone
 
-Module 1 — Foundation
+Module 2 — AI Lead Engine
 
 Includes:
-
-* Repository setup
-* React application
-* Express server
-* PostgreSQL connection
-* Authentication
-* Base dashboard
-* Project structure
+* Database migration for CRM leads and webhook events
+* Public website lead capture API endpoint
+* AI lead qualification & scoring service utilizing OpenAI Structured Outputs
+* CRM leads manager frontend view Integration
 
 ---
 
