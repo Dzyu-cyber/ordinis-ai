@@ -407,4 +407,72 @@ export class AIService {
       return getFallbackMock();
     }
   }
+
+  /**
+   * Auto-generate an executive summary report for business metrics
+   */
+  static async generateExecutiveSummary(metrics: any, recentActivity: any[]): Promise<string> {
+    const isConfigured = !!openai;
+
+    if (!isConfigured) {
+      console.log('[openai]: OpenAI is not configured. Returning fallback mock executive summary.');
+      return `### Executive Daily Highlights
+
+- **Lead Pipeline Health**: Your lead list has grown to **${metrics.totalLeads} total leads** (with **${metrics.qualifiedLeads} verified qualified leads**), showing positive interest.
+- **Inbox Engagement**: Customer threads remain active. There are currently **${metrics.activeThreads} active threads** across email and WhatsApp.
+- **Operations Activity**: Operations teams processed **${metrics.totalDocuments} documents** (invoices, resumes, contracts) through AI Vision OCR, speeding up entry and validation.
+
+**Recommended Next Actions**:
+1. Follow up with the newly qualified leads that have high priority scores.
+2. Draft response suggestions for the threads with client queries.`;
+    }
+
+    try {
+      const response = await openai!.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `
+              You are an elite Business Operations Advisor. Analyze the user's business metrics and recent operations log and write a concise, premium daily executive summary.
+              
+              Formatting:
+              - Use Markdown syntax.
+              - Include an "Executive Daily Highlights" section with 3 actionable bullet points.
+              - Include a "Recommended Next Actions" section with 2 prioritized next steps.
+              - Keep it clean, professional, and inspiring. Avoid placeholders.
+            `,
+          },
+          {
+            role: 'user',
+            content: `
+              Business Metrics:
+              - Total Leads: ${metrics.totalLeads}
+              - Qualified Leads (BANT score >= 70): ${metrics.qualifiedLeads}
+              - Total Active Threads: ${metrics.activeThreads}
+              - Total Documents Uploaded: ${metrics.totalDocuments}
+              - Total Document Extraction Success: ${metrics.completedDocuments}
+              
+              Recent System Operations:
+              ${recentActivity.map((a: any) => `- [${a.action}] ${a.details ? JSON.stringify(a.details) : ''}`).join('\n')}
+            `,
+          },
+        ],
+        temperature: 0.7,
+      });
+
+      return response.choices[0].message.content || '';
+    } catch (error) {
+      console.error('[openai]: Failed to generate executive summary. Using mock fallback.', error);
+      return `### Executive Daily Highlights
+
+- **Lead Pipeline Health**: Your lead list has grown to **${metrics.totalLeads} total leads** (with **${metrics.qualifiedLeads} verified qualified leads**), showing positive interest.
+- **Inbox Engagement**: Customer threads remain active. There are currently **${metrics.activeThreads} active threads** across email and WhatsApp.
+- **Operations Activity**: Operations teams processed **${metrics.totalDocuments} documents** (invoices, resumes, contracts) through AI Vision OCR, speeding up entry and validation.
+
+**Recommended Next Actions**:
+1. Follow up with the newly qualified leads that have high priority scores.
+2. Draft response suggestions for the threads with client queries.`;
+    }
+  }
 }

@@ -9,6 +9,7 @@ import authRoutes from './routes/authRoutes';
 import leadRoutes from './routes/leadRoutes';
 import communicationRoutes from './routes/communicationRoutes';
 import documentRoutes from './routes/documentRoutes';
+import reportingRoutes from './routes/reportingRoutes';
 import { errorMiddleware } from './middleware/errorMiddleware';
 
 // Load environment variables
@@ -35,6 +36,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/communication', communicationRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/reports', reportingRoutes);
 
 // Basic health check route verifying DB connection
 app.get('/health', async (req: Request, res: Response) => {
