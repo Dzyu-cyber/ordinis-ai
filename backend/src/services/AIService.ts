@@ -1,0 +1,200 @@
+import OpenAI from 'openai';
+import { zodResponseFormat } from 'openai/helpers/zod';
+import { z } from 'zod';
+import dotenv from 'dotenv';
+import { db } from '../config/db';
+
+dotenv.config();
+
+const apiKey = process.env.OPENAI_API_KEY;
+
+let openai: OpenAI | null = null;
+
+if (apiKey) {
+  openai = new OpenAI({ apiKey });
+} else {
+  console.warn('[openai]: OPENAI_API_KEY is not defined. AI qualification will run in mock fallback mode.');
+}
+
+// Zod Schema for structured AI output BANT qualification
+const QualificationResultSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  budget: z.string(),
+  authority: z.string(),
+  need: z.string(),
+  timeline: z.string(),
+  summary: z.string(),
+});
+
+type QualificationResult = z.infer<typeof QualificationResultSchema>;
+
+export class AIService {
+  /**
+   * Qualify a CRM lead based on profile attributes and contextual notes using OpenAI Structured Outputs
+   */
+  static async qualifyLead(lead: {
+    name: string;
+    email: string | null;
+    phone: string | null;
+    company: string | null;
+    notes?: string;
+  }): Promise<QualificationResult> {
+    const promptContext = `
+      You are an elite AI Sales Qualification Assistant for Ordinis AI, a Revenue & Operations Business OS.
+      Analyze the inbound lead profile information and any conversation history notes to score and qualify them.
+      
+      Determine the BANT parameters:
+      - Budget: How much money do they have? Is it clear or undefined?
+      - Authority: Who are they? Are they a Founder, Director, Manager, or generic employee?
+      - Need: What problem are they trying to solve with our operating system (e.g., lead automation, unified inbox)?
+      - Timeline: When do they plan to purchase or start? (Immediate, 30 days, 60 days, undefined)
+      
+      Calculate a composite lead score (0-100) using this metric:
+      - 25 pts: Budget defined (more points for higher budget).
+      - 25 pts: High Authority (Founder, C-level = 25; Manager = 15; Individual Contributor = 5).
+      - 25 pts: Clear operational pain point / need specified.
+      - 25 pts: Short timeline (< 30 days = 25; < 60 days = 15; undefined = 5).
+      
+      Output the structured parameters exactly as defined in the schema.
+    `;
+
+    const userContent = `
+      Lead Profile:
+      - Name: ${lead.name}
+      - Company: ${lead.company || 'Not Specified'}
+      - Email: ${lead.email || 'Not Specified'}
+      - Phone: ${lead.phone || 'Not Specified'}
+      - Interaction History / Contextual Notes: ${lead.notes || 'No notes provided yet.'}
+    `;
+
+    // Fallback Mock data if OpenAI API is unavailable
+    const fallbackMockQualification = (reason: string): QualificationResult => {
+      console.log(`[openai]: Generating fallback qualification details (Reason: ${reason})`);
+      
+      // Calculate a simple mock score based on email domain
+      let mockScore = 20;
+      let mockNeed = 'Requires basic operational organization';
+      let mockAuthority = 'Undetermined';
+      
+      if (lead.email?.endsWith('.edu') || lead.email?.endsWith('.org')) {
+        mockScore = 35;
+      } else if (lead.email && !lead.email.includes('gmail') && !lead.email.includes('yahoo')) {
+        mockScore = 65; // Corporate email domain
+        mockAuthority = 'Likely Manager/Decision Maker';
+        mockNeed = 'AI automated client routing and unified messaging inbox setup';
+      }
+
+      if (lead.notes && lead.notes.length > 5) {
+        mockScore += 15;
+      }
+
+      return {
+        score: Math.min(mockScore, 100),
+        budget: 'Undetermined (Fallback Mock)',
+        authority: mockAuthority,
+        need: mockNeed,
+        timeline: 'Within 90 days',
+        summary: `Lead qualified in mock fallback mode. Name: ${lead.name}. Company: ${lead.company || 'N/A'}. Details: ${reason}`,
+      };
+    };
+
+    if (!openai) {
+      return fallbackMockQualification('OPENAI_API_KEY not configured');
+    }
+
+    try {
+      const response = await openai.beta.chat.completions.parse({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: promptContext },
+          { role: 'user', content: userContent },
+        ],
+        response_format: zodResponseFormat(QualificationResultSchema, 'qualification'),
+        temperature: 0.1,
+      });
+
+      const result = response.choices[0].message.parsed;
+
+      if (!result) {
+        throw new Error('Parsed response returned null');
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('[openai]: AI Qualification failed. Falling back to mock calculation.', error);
+      return fallbackMockQualification(error.message || 'API Call Exception');
+    }
+  }
+
+  /**
+   * Run background qualification job and update lead record
+   */
+  static async triggerLeadQualification(userId: string, leadId: string): Promise<void> {
+    try {
+      // 1. Fetch Lead
+      const leadResult = await db.query(
+        'SELECT * FROM leads WHERE user_id = $1 AND id = $2',
+        [userId, leadId]
+      );
+      
+      if (leadResult.rows.length === 0) {
+        console.error(`[openai]: Trigger qualification failed. Lead ${leadId} not found.`);
+        return;
+      }
+
+      const lead = leadResult.rows[0];
+
+      // 2. Fetch conversation history notes to pass as context
+      const messagesResult = await db.query(
+        `SELECT m.direction, m.content FROM messages m
+         JOIN conversations c ON m.conversation_id = c.id
+         WHERE c.lead_id = $1
+         ORDER BY m.created_at ASC`,
+        [leadId]
+      );
+
+      const notes = messagesResult.rows
+        .map((m: any) => `${m.direction === 'inbound' ? 'Customer' : 'Agent'}: ${m.content}`)
+        .join('\n');
+
+      // 3. Call AI Service
+      const qualification = await this.qualifyLead({
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        company: lead.company,
+        notes,
+      });
+
+      // 4. Update Database
+      await db.query(
+        `UPDATE leads 
+         SET score = $1, qualification_details = $2, status = $3
+         WHERE id = $4`,
+        [
+          qualification.score, 
+          JSON.stringify({
+            budget: qualification.budget,
+            authority: qualification.authority,
+            need: qualification.need,
+            timeline: qualification.timeline,
+            summary: qualification.summary
+          }),
+          qualification.score >= 70 ? 'qualified' : 'contacted',
+          leadId
+        ]
+      );
+
+      // Log AI qualification activity
+      await db.query(
+        `INSERT INTO activity_logs (user_id, action, details)
+         VALUES ($1, $2, $3)`,
+        [userId, 'lead_qualified', JSON.stringify({ leadId, score: qualification.score })]
+      );
+
+      console.log(`[openai]: Successfully qualified lead ${leadId} with score ${qualification.score}`);
+    } catch (error) {
+      console.error(`[openai]: Background qualification job failed for lead ${leadId}`, error);
+    }
+  }
+}
